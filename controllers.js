@@ -171,15 +171,16 @@ const controllers = (Application) => {
             if (k[0] === '_id') q[k[0]] = db.ObjectId(k[1].trim());
             else if (k[0][0] === '_') q[k[0].substr(1)] = db.ObjectId(k[1].trim());
             else if (k[1][0] === '/' && k[1][k[1].length - 1] === '/') q[k[0]] = RegExp(k[1].trim().substr(1).slice(0, -1), 'i');
+            else if (k[1][0] === '¡' && k[1][k[1].length - 1] === '¡') q[k[0]] = { $nin: [k[1].trim().substr(1).slice(0, -1)] };
             else if (k[1][0] === '!' && k[1][k[1].length - 1] === '!') q[k[0]] = { $ne: k[1].trim().substr(1).slice(0, -1) };
             else if (k[1][0] === '>' && k[1][k[1].length - 1] === '>') {
-              if (k[0] === 'startAt' || k[0] === 'endAt' || k[0] === 'added' || k[0] === 'updated') {
+              if (k[0] === 'startAt' || k[0] === 'endAt' || k[0] === 'added' || k[0] === 'updated' || k[0] === 'pickup') {
                 q[k[0]] = { $gt: new Date(k[1].trim().substr(1).slice(0, -1)) };
               } else {
                 q[k[0]] = { $gt: parseInt(k[1].trim().substr(1).slice(0, -1), 10) };
               }
             } else if (k[1][0] === '<' && k[1][k[1].length - 1] === '<') {
-              if (k[0] === 'startAt' || k[0] === 'endAt' || k[0] === 'added' || k[0] === 'updated') {
+              if (k[0] === 'startAt' || k[0] === 'endAt' || k[0] === 'added' || k[0] === 'updated' || k[0] === 'pickup') {
                 q[k[0]] = { $lt: new Date(k[1].trim().substr(1).slice(0, -1)) };
               } else {
                 q[k[0]] = { $lt: parseInt(k[1].trim().substr(1).slice(0, -1), 10) };
@@ -205,7 +206,7 @@ const controllers = (Application) => {
               if (subparts.length === 0) return;
               q[k[0]] = { $in: subparts };
             } else {
-              if (k[0] === 'startAt' || k[0] === 'endAt' || k[0] === 'added' || k[0] === 'updated') {
+              if (k[0] === 'startAt' || k[0] === 'endAt' || k[0] === 'added' || k[0] === 'updated' || k[0] === 'pickup') {
                 const today = new Date(k[1].trim());
                 const nextDay = new Date(k[1].trim());
                 if (!('$and' in q)) q.$and = [];
