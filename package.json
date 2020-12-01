@@ -26,10 +26,7 @@
     "node": ">= 8.0.0"
   },
   "contributors": [
-    {
-      "name": "Jose Miguel Sánchiz",
-      "email": "jose@goxo.es"
-    }
+    "Jose Miguel Sánchiz <jose@goxo.es>"
   ],
   "homepage": "https://github.com/goxocity/universal-pattern",
   "dependencies": {
