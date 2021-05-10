@@ -215,16 +215,14 @@ const controllers = (Application) => {
     },
     'universal.search': async (req, res, next) => {
       debug('.search called: ', req.swagger.params);
-      let q = req.swagger.params.q.value;
-      let sorting = req.swagger.params.sorting.value;
-      const page = req.swagger.params.page.value;
-      const limit = req.swagger.params.limit.value;
-      const fields = req.swagger.params.fields.value;
-      const distinct = req.swagger.params && req.swagger.params.distinct ? req.swagger.params.distinct.value : null;
-      let coordinates = null;
-
-
-      if (req.swagger.params.coordinates) coordinates = req.swagger.params.coordinates.value;
+      let { q, sorting } = req.swagger.params;
+      const {
+          page,
+          limit,
+          fields,
+          distinct,
+          coordinates,
+      } = req.swagger.params;
 
       if (q) {
         const parts = q.split(',');
@@ -282,7 +280,9 @@ const controllers = (Application) => {
                 const item2 = {};
                 item2[k[0]] = { $lt: nextDay };
                 q.$and.push(item2);
-              } else {
+              } else if (k[1] === 'false') q[k[0]] = false;
+              else if (k[1] === 'true') q[k[0]] = true;
+               else {
                 q[k[0]] = k[1].trim();
               }
             }
@@ -329,8 +329,6 @@ const controllers = (Application) => {
           if (q.orgId) {
             const hash = crypto.createHash('sha256').update(JSON.stringify({q, page, limit, sorting})).digest('hex').substring(48)
             const result = await redis.get(`${collection}:orgId:${q.orgId}:query:${hash}`)
-            if (result) debug('REDIS FINDED')
-            if (result) console.log('REDIS FINDED')
             if (result) return res.json(JSON.parse(result))
           }
         }
@@ -379,13 +377,9 @@ const controllers = (Application) => {
           if (q.orgId) {
             const hash = crypto.createHash('sha256').update(JSON.stringify({q, page, limit, sorting})).digest('hex').substring(48)
             await redis.set(`${collection}:orgId:${q.orgId}:query:${hash}`, JSON.stringify(result), 'EX', redis.configTls[collection])
-            debug('REDIS SAVED ORGID')
-            console.log('REDIS SAVED ORGID')
           } else if (q._id) {
             const hash = crypto.createHash('sha256').update(JSON.stringify({q, page, limit, sorting})).digest('hex').substring(48)
             await redis.set(`${collection}:id:${q._id}:query:${hash}`, JSON.stringify(result), 'EX', redis.configTls[collection])
-            debug('REDIS SAVED ID')
-            console.log('REDIS SAVED ID')
           }
         }
 
