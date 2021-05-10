@@ -329,8 +329,6 @@ const controllers = (Application) => {
           if (q.orgId) {
             const hash = crypto.createHash('sha256').update(JSON.stringify({q, page, limit, sorting})).digest('hex').substring(48)
             const result = await redis.get(`${collection}:orgId:${q.orgId}:query:${hash}`)
-            if (result) debug('REDIS FINDED')
-            if (result) console.log('REDIS FINDED')
             if (result) return res.json(JSON.parse(result))
           }
         }
@@ -379,13 +377,9 @@ const controllers = (Application) => {
           if (q.orgId) {
             const hash = crypto.createHash('sha256').update(JSON.stringify({q, page, limit, sorting})).digest('hex').substring(48)
             await redis.set(`${collection}:orgId:${q.orgId}:query:${hash}`, JSON.stringify(result), 'EX', redis.configTls[collection])
-            debug('REDIS SAVED ORGID')
-            console.log('REDIS SAVED ORGID')
           } else if (q._id) {
             const hash = crypto.createHash('sha256').update(JSON.stringify({q, page, limit, sorting})).digest('hex').substring(48)
             await redis.set(`${collection}:id:${q._id}:query:${hash}`, JSON.stringify(result), 'EX', redis.configTls[collection])
-            debug('REDIS SAVED ID')
-            console.log('REDIS SAVED ID')
           }
         }
 
