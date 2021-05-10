@@ -62,14 +62,15 @@ const controllers = (Application) => {
         // Redis
         const collection = getCollection(req.swagger.apiPath)
         if (['dishtemplates'].includes(collection)){
-          if (data.orgId) {
+          console.log('data', data)
+          if (data?.orgId) {
             await redis.deleteKeysByPattern(`${collection}:orgId:${data.orgId}:*`)
             await redis.unlink(`${collection}:orgId:${data.orgId}`)
           }
         }
 
         if (['dishtemplatesformats'].includes(collection)){
-          if (data.dishtemplates) {
+          if (data?.dishtemplates) {
             await redis.deleteKeysByPattern(`dishtemplates:orgId:${data.dishtemplates.orgId}:*`)
             await redis.unlink(`dishtemplates:orgId:${data.dishtemplates.orgId}`)
             await redis.deleteKeysByPattern(`dishtemplates:id:${data.dishtemplates._id}:*`)
