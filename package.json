@@ -1,6 +1,6 @@
 {
   "name": "@goxocity/universal-pattern",
-  "version": "1.0.25",
+  "version": "1.1.0",
   "description": "This is easy way to implement universal pattern, swagger and restfull api",
   "main": "index.js",
   "scripts": {
@@ -26,6 +26,7 @@
     "node": ">= 8.0.0"
   },
   "contributors": [
+    "Jose Maria Carmona Caballero <joscarcab@gmail.com>",
     "Jose Miguel Sánchiz <jose@goxo.es>"
   ],
   "homepage": "https://github.com/goxocity/universal-pattern",

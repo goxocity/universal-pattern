@@ -1,5 +1,7 @@
 const debug = require('debug')('universal-pattern:controllers');
 
+const crypto = require('crypto')
+const getCollection = (reqSwaggerApiPath) => reqSwaggerApiPath.substring(1)
 
 const injectDefaultModel = (model, req) => ({
   ...model,
@@ -8,7 +10,7 @@ const injectDefaultModel = (model, req) => ({
 });
 
 const controllers = (Application) => {
-  const { services, db } = Application;
+  const { config, services, db,  redis } = Application;
 
   const lookupProcess = async (params, lookup) => {
     const data = await services.findOne(`/${lookup.collection}`, { _id: db.ObjectId(params[lookup.field]) }, lookup.populate.reduce((a, b) => ({ ...a, [b]: 1 }), {}));
@@ -55,6 +57,23 @@ const controllers = (Application) => {
         if (Application.hooks[req.swagger.apiPath] && Application.hooks[req.swagger.apiPath].afterInsert) {
           doc = await Application.hooks[req.swagger.apiPath].afterInsert(req, doc, Application);
         }
+        // Redis
+        const collection = getCollection(req.swagger.apiPath)
+        if (['dishtemplates'].includes(collection)){
+          if (data.orgId) {
+            await redis.deleteKeysByPattern(`${collection}:orgId:${data.orgId}:*`)
+            await redis.unlink(`${collection}:orgId:${data.orgId}`)
+          }
+        }
+
+        if (['dishtemplatesformats'].includes(collection)){
+          if (data.dishtemplates) {
+            await redis.deleteKeysByPattern(`dishtemplates:orgId:${data.dishtemplates.orgId}:*`)
+            await redis.unlink(`dishtemplates:orgId:${data.dishtemplates.orgId}`)
+            await redis.deleteKeysByPattern(`dishtemplates:id:${data.dishtemplates._id}:*`)
+            await redis.unlink(`dishtemplates:id:${data.dishtemplates._id}`)
+          }
+        }
         return res.json(doc);
       } catch (err) {
         return next(err);
@@ -76,6 +95,7 @@ const controllers = (Application) => {
 
       debug('.update called: ', data);
       try {
+        const oldData = await services.findOne(req.swagger.apiPath, {_id})
         if (Application.hooks['*'] && Application.hooks['*'].beforeUpdate) {
           data = await Application.hooks['*'].beforeUpdate(req, data, Application);
         }
@@ -99,6 +119,26 @@ const controllers = (Application) => {
           updateDocument = await Application.hooks[req.swagger.apiPath].afterUpdate(req, { ...updateDocument, result }, Application);
         }
 
+        // Redis
+        const collection = getCollection(req.swagger.apiPath)
+        if (oldData && ['dishtemplates'].includes(collection)){
+          if (oldData.orgId) {
+            await redis.deleteKeysByPattern(`${collection}:orgId:${oldData.orgId}:*`)
+            await redis.unlink(`${collection}:orgId:${oldData.orgId}`)
+          }
+          await redis.deleteKeysByPattern(`${collection}:id:${oldData._id}:*`)
+          await redis.unlink(`${collection}:id:${oldData._id}`)
+        }
+
+        if (oldData && ['dishtemplatesformats'].includes(collection)){
+          if (oldData.dishtemplates) {
+            await redis.deleteKeysByPattern(`dishtemplates:orgId:${oldData.dishtemplates.orgId}:*`)
+            await redis.unlink(`dishtemplates:orgId:${oldData.dishtemplates.orgId}`)
+            await redis.deleteKeysByPattern(`dishtemplates:id:${oldData.dishtemplates._id}:*`)
+            await redis.unlink(`dishtemplates:id:${oldData.dishtemplates._id}`)
+          }
+        }
+
         return res.json({ ...updateDocument, result });
       } catch (err) {
         return next(err);
@@ -108,6 +148,7 @@ const controllers = (Application) => {
       const _id = req.swagger.params._id.value;
       debug('.remove called: ', _id);
       try {
+        const oldData = await services.findOne(req.swagger.apiPath, {_id})
         if (Application.hooks['*'] && Application.hooks['*'].beforeRemove) {
           await Application.hooks['*'].beforeRemove(req, _id, Application);
         }
@@ -123,6 +164,25 @@ const controllers = (Application) => {
         }
         if (Application.hooks[req.swagger.apiPath] && Application.hooks[req.swagger.apiPath].afterRemove) {
           removedDocument = await Application.hooks[req.swagger.apiPath].afterRemove(req, { ...removedDocument, result }, Application);
+        }
+
+        //redis
+        if (oldData && ['dishtemplates'].includes(collection)){
+          if (oldData.orgId) {
+            await redis.deleteKeysByPattern(`${collection}:orgId:${oldData.orgId}:*`)
+            await redis.unlink(`${collection}:orgId:${oldData.orgId}`)
+          }
+          await redis.deleteKeysByPattern(`${collection}:id:${oldData._id}:*`)
+          await redis.unlink(`${collection}:id:${oldData._id}`)
+        }
+
+        if (oldData && ['dishtemplatesformats'].includes(collection)){
+          if (oldData.dishtemplates) {
+            await redis.deleteKeysByPattern(`dishtemplates:orgId:${oldData.dishtemplates.orgId}:*`)
+            await redis.unlink(`dishtemplates:orgId:${oldData.dishtemplates.orgId}`)
+            await redis.deleteKeysByPattern(`dishtemplates:id:${oldData.dishtemplates._id}:*`)
+            await redis.unlink(`dishtemplates:id:${oldData.dishtemplates._id}`)
+          }
         }
 
         return res.json({ ...removedDocument, result });
@@ -259,6 +319,15 @@ const controllers = (Application) => {
       }
       req.q = q;
       try {
+        //redis
+        const collection = getCollection(req.swagger.apiPath)
+        if (['dishtemplates'].includes(collection)){
+          if (q.orgId) {
+            const hash = crypto.createHash('sha256').update(JSON.stringify({q, page, limit, sorting})).digest('hex').substring(48)
+            const result = await redis.get(`${collection}:orgId:${q.orgId}:query:${hash}`)
+            if (result) return res.json(JSON.parse(result))
+          }
+        }
         const searchParams = {
           page,
           limit,
@@ -295,6 +364,16 @@ const controllers = (Application) => {
         }
         if (Application.hooks[req.swagger.apiPath] && Application.hooks[req.swagger.apiPath].afterSearch) {
           result = await Application.hooks[req.swagger.apiPath].afterSearch(req, result, Application);
+        }
+        //redis
+        if (['dishtemplates'].includes(collection)){
+          if (q.orgId) {
+            const hash = crypto.createHash('sha256').update(JSON.stringify({q, page, limit, sorting})).digest('hex').substring(48)
+            await redis.set(`${collection}:orgId:${q.orgId}:query:${hash}`, JSON.stringify(result), 'EX', redis.configTls[collection])
+          } else if (q._id) {
+            const hash = crypto.createHash('sha256').update(JSON.stringify({q, page, limit, sorting})).digest('hex').substring(48)
+            await redis.set(`${collection}:id:${q._id}:query:${hash}`, JSON.stringify(result), 'EX', redis.configTls[collection])
+          }
         }
         return res.json(result);
       } catch (err) {
