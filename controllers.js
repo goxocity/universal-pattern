@@ -58,6 +58,7 @@ const controllers = (Application) => {
           doc = await Application.hooks[req.swagger.apiPath].afterInsert(req, doc, Application);
         }
         // Redis
+        const data = doc
         const collection = getCollection(req.swagger.apiPath)
         if (['dishtemplates'].includes(collection)){
           if (data.orgId) {
@@ -167,6 +168,7 @@ const controllers = (Application) => {
         }
 
         //redis
+        const collection = getCollection(req.swagger.apiPath)
         if (oldData && ['dishtemplates'].includes(collection)){
           if (oldData.orgId) {
             await redis.deleteKeysByPattern(`${collection}:orgId:${oldData.orgId}:*`)
