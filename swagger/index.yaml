@@ -5,8 +5,8 @@ info:
   termsOfService: 'http://localhost:8000/terms'
 host: 'localhost'
 schemes:
-  - http
   - https
+  - http
 consumes:
   - application/json
   - application/octet-stream
